@@ -15,8 +15,8 @@ packageVersion("ShortRead")
 library(Biostrings)
 packageVersion("Biostrings")
 
-## Change me to the directory containing the fataq files
-path <- "D:/EDH2017_soil"
+## Change the path to the directory containing the fataq files
+path <- "~"
 list.files(path)
 
 ## generate matched lists of the forward and reverse read files, as well as parsing out the sample name
@@ -148,7 +148,7 @@ rownames(track) <- sample.names
 head(track)
 
 ## Assign taxonomy with UNITE database
-unite.ref <- "D:/EDH2017/sh_general_release_dynamic_s_all_02.02.2019.fasta"  # CHANGE ME to location on your machine
+unite.ref <- "~"  # Change the path to the directory containing the UNITE database files
 taxa <- assignTaxonomy(seqtab.nochim, unite.ref, multithread = TRUE, tryRC = TRUE)
 
 # Inspecting the taxonomic assignments:
@@ -156,32 +156,24 @@ taxa.print <- taxa  # Removing sequence rownames for display only
 rownames(taxa.print) <- NULL
 head(taxa.print)
 
-# Write out
-setwd("D:/EDH2017_soil")
-write.csv(seqtab.nochim, file = "EDH2017.seqtab.nochim.csv")
-write.csv(taxa, file = "EDH2017.taxonomy.csv")
-
 ###########################################################
 ## Compute alpha diversity indices
 library(vegan)                                       
-setwd("D:/EDH2017_soil/results")                                             # setting your working directory
+setwd("~")                                             # setting your working directory
 asv.table <- read.csv(file = "asv_fungi_table_52000.csv", header = TRUE, row.names = 1)
 head(asv.table)
 t.asv.table <- t(asv.table)
 
-richness <- specnumber(t.asv.table)                  # species richness
-shannon_diversity <- diversity(t.asv.table)           # shannon entropy (base e)
-simpson_diversity <- diversity(t.asv.table, "simpson")    # simpson diversity
-inverse_simpson <- diversity(t.asv.table, "invsimpson")
-pielou_evenness <- shannon_diversity/log(richness)      # pielou evenness
-shannon_evenness <- shannon_diversity/richness        # shannon evenness
-simpson_evenness <- simpson_diversity/richness        # simpson evenness
+richness <- specnumber(t.asv.table)                  # Species richness
+shannon_diversity <- diversity(t.asv.table)           # Shannon entropy (base e)
+simpson_diversity <- diversity(t.asv.table, "simpson")    # Simpson diversity
+inverse_simpson <- diversity(t.asv.table, "invsimpson") # Inverse Simpson index
 
 ###########################################################
 ## Model fit using random forest
 library(randomForest)
 library(randomForestExplainer)
-setwd("D:/Writing/Extreme drought/HST.AMF.2017/Data analyses/results/AMF/Model.fit")
+setwd("~")
 data <- read.csv(file = "env.csv", row.names = 1)
 head(data)
 
@@ -207,15 +199,15 @@ importance(forest, type = 1)
 
 ##################################################################
 # Redundancy Analysis (RDA)
-library(adespatial);packageVersion("adespatial")
+library(adespatial)
 library(vegan)
 library(ggplot2)
-setwd("D:/HST.AMF.2017/results/AMF/RDA")
+setwd("~")
 
 # Read data
-spe.amf <- read.csv(file = "AMF.Genus.csv", header = TRUE, row.names = 1)
-spe.amf <- t(spe.amf)
-head(spe.amf)
+genus.tab <- read.csv(file = "AM.fungal.genus.tab.csv", header = TRUE, row.names = 1)
+genus.tab <- t(genus.tab)
+head(genus.tab)
 
 env <- read.csv(file = "env.csv", header = TRUE, row.names = 1)
 head(env)
@@ -223,59 +215,50 @@ envplant <- read.csv(file = "envplant.csv", header = TRUE, row.names = 1)
 head(envplant)
 envchem <- read.csv(file = "envchem.csv", header = TRUE, row.names = 1)
 head(envchem)
-envtreament <- read.csv(file = "envtreatment.csv", header = TRUE, row.names = 1)
-head(envtreament)
 
 # db-RDA
-(spe.amf.dbRDA <- capscale(spe.amf ~ Treatment + ANPP + C + CN + N + AP + pH + Richness, 
-                           env, distance = "bray", comm = spe.amf))
+(genus.amf.dbRDA <- capscale(genus.tab ~ Treatment + ANPP + C + CN + N + AP + pH + Richness, 
+                           env, distance = "bray", comm = genus.tab))
 
-anova(spe.amf.dbRDA, permutations = how(nperm = 9999))
-anova(spe.amf.dbRDA, permutations = how(nperm = 9999), by = "axis")
-summary(spe.amf.dbRDA)
+anova(genus.amf.dbRDA, permutations = how(nperm = 9999))
+anova(genus.amf.dbRDA, permutations = how(nperm = 9999), by = "axis")
+summary(genus.amf.dbRDA)
 
-(R2a.amf.dbRDA <- RsquareAdj(spe.amf.dbRDA)$adj.r.squared)
-(R2 <- RsquareAdj(spe.amf.dbRDA)$r.squared)
-vif.cca(spe.amf.dbRDA)
+(R2a.genus.dbRDA <- RsquareAdj(genus.amf.dbRDA)$adj.r.squared)
+(R2 <- RsquareAdj(genus.amf.dbRDA)$r.squared)
+vif.cca(genus.amf.dbRDA)
 
-# using ggplot2 make figures
-spe.amf.dbRDA.scaling1 <- summary(spe.amf.dbRDA, scaling = 1) # extract scaling 1
-spe.amf.dbRDA.site <- data.frame(spe.amf.dbRDA.scaling1$sites)[, 1:2]
-# spe.amf.dbRDA.site.constraints <- data.frame(spe.amf.dbRDA.scaling1$constraints)[, 1:2]
-spe.amf.dbRDA.env <- data.frame(spe.amf.dbRDA.scaling1$biplot)[, 1:2]
+# using ggplot2 to make figures
+genus.amf.dbRDA.scaling1 <- summary(genus.amf.dbRDA, scaling = 1) # extract scaling 1
+genus.amf.dbRDA.site <- data.frame(genus.amf.dbRDA.scaling1$sites)[, 1:2]
+genus.amf.dbRDA.env <- data.frame(genus.amf.dbRDA.scaling1$biplot)[, 1:2]
 
 # read group data
 group <- read.delim('group.txt', sep = '\t', stringsAsFactors = FALSE, check.names = FALSE)
 group$Treatment <- factor(group$Treatment, 
                           levels =c("Control", "CHR", "CHRR", "INT", "INTR"))
 # merge group information
-spe.amf.dbRDA.site$sample <- row.names(spe.amf.dbRDA.site)
-spe.amf.dbRDA.site <- merge(spe.amf.dbRDA.site, group, by = 'sample')
-head(spe.amf.dbRDA.site)
+genus.amf.dbRDA.site$sample <- row.names(genus.amf.dbRDA.site)
+genus.amf.dbRDA.site <- merge(genus.amf.dbRDA.site, group, by = 'sample')
+head(genus.amf.dbRDA.site)
 
-spe.amf.dbRDA.env$sample <- NA
-spe.amf.dbRDA.env$group <- row.names(spe.amf.dbRDA.env)
-spe.amf.dbRDA.env <- spe.amf.dbRDA.env[5:12, ]
-head(spe.amf.dbRDA.env)
+genus.amf.dbRDA.env$sample <- NA
+genus.amf.dbRDA.env$group <- row.names(genus.amf.dbRDA.env)
+genus.amf.dbRDA.env <- genus.amf.dbRDA.env[5:12, ]
+head(genus.amf.dbRDA.env)
 
-spe.amf.dbRDA.env.tre <- data.frame(spe.amf.dbRDA.scaling1$centroids)[, 1:2]
-colnames(spe.amf.dbRDA.env.tre) <- c("T1", "T2")
-head(spe.amf.dbRDA.env.tre)
-
-p <- ggplot(spe.amf.dbRDA.site, aes(CAP1, CAP2)) +
+p <- ggplot(genus.amf.dbRDA.site, aes(CAP1, CAP2)) +
             geom_point(aes(color = Treatment), size = 5) +
             scale_y_continuous(limits = c(-0.5, 0.5)) +
             scale_color_manual(values = c("#8DC63F", "#FBB040", "#F06B22", "#39B54A", "#009444")) +
             geom_vline(xintercept = 0, color = "gray", size = 0.5) +
             geom_hline(yintercept = 0, color = "gray", size = 0.5) +
-            geom_point(data = spe.amf.dbRDA.env.tre, aes(x = T1, y = T2), color ="blue", size = 5) +
-            geom_text(data = spe.amf.dbRDA.env.tre, aes(x = T1, y = T2, label = rownames(spe.amf.dbRDA.env.tre)), color ="blue", size = 3) +
-            geom_segment(data = spe.amf.dbRDA.env, 
+            geom_segment(data = genus.amf.dbRDA.env, 
                          aes(x = 0,y = 0, xend = CAP1, yend = CAP2),
                          arrow = arrow(length = unit(0.1, "cm")), 
                          size = 0.3, color = "blue") +
             geom_text(data = spe.amf.dbRDA.env, aes(CAP1 * 1.1, CAP2 * 1.1, label = group), color ="blue", size = 3) +
-            labs(x = 'db-RDA1 (18.81%)', y = 'db-RDA2 (3.50%)') + 
+            labs(x = 'db-RDA1 (~)', y = 'db-RDA2 (~)') + # The degree of explaination was caculated in summary(genus.amf.dbRDA) above
             theme(panel.grid = element_blank(), 
                   panel.background = element_rect(color = "black", fill ="transparent"), 
                   legend.title = element_text(), 
@@ -283,32 +266,33 @@ p <- ggplot(spe.amf.dbRDA.site, aes(CAP1, CAP2)) +
                   legend.position = c(0.85, 0.85))
 p
 
+# Calculating the confidence ellipses
 p1 <- p + stat_ellipse(aes(color = Treatment), level = 0.65, linetype = 2)
 p1
 
 ##########################################################################
-# Network construction
+## Network construction
 library(igraph)
 library(psych)
 library(vegan)
 library(Matrix)
 library(RColorBrewer)
 
-setwd("D:/Study/PhD/Writing/Extreme drought/HST.AMF.2017/Data analyses/results/AMF/networks/species.net")
+setwd("~")
 
-otu.table <- read.csv(file = "AMF_plant_ASVtab.csv", header = T, row.names = 1)
+otu.table <- read.csv(file = "AMF.plant.species.table.csv", header = T, row.names = 1)
 head(t(otu.table))
 
-# Filtering low abundacne OTUs, maintaining OTUs appear more than 6 times of all the samples
+# Filtering low abundacne OTUs, maintaining OTUs appear more than 3 times of all the samples
 otu.table.filter <- otu.table[, specnumber(t(otu.table)) >= 3]
-print(c(ncol(otu.table), "versus", ncol(otu.table.filter))) # OTUs left
+print(c(ncol(otu.table), "versus", ncol(otu.table.filter))) # OTUs left vs before
 
-# caculate pairwise 
-occor <- corr.test(otu.table.filter, use = "pairwise", method = "spearman", adjust = "BH", alpha = .05)
+# Caculating pairwise correlations
+occor <- corr.test(otu.table.filter, use = "pairwise", method = "spearman", adjust = "holm", alpha = .05)
 occor.r <- occor$r
 occor.p <- occor$p
 
-#  Filter the association based on p-values and level of correlations
+#  Filter the association based on the p-values and correlation coefficient
 occor.r[occor.p > 0.01 | abs(occor.r) < 0.3] = 0
 
 # Create igraph object
@@ -328,28 +312,23 @@ net.graph.weight <- E(net.graph)$weight
 # remove the weight before plotting (may influence the layouts)
 E(net.graph)$weight <-NA
 
-edge.list <- as_edgelist(net.graph)
-write.csv(edge.list, file = "species.net.edgelist.filter3.csv")
 # Plot the graph object
 set.seed(123)
-plot(net.graph, main = "AMF-PLANT NETWORK FILTER5", edge.lty = 1, margin=c(0,0,0,0),
+plot(net.graph, main = "AMF-PLANT NETWORK", edge.lty = 1, margin=c(0,0,0,0),
      vertex.size = 5, vertex.frame.color = NA, edge.curved = T, edge.width = 1, 
      layout = layout_with_fr(net.graph), vertex.label = NA)
 
-# compute node degrees (links) and use that to set node size:
+# Compute node degrees (links) and use that to set node size
 deg <- degree(net.graph, mode = "all")
 V(net.graph)$size <- deg*2
-plot(net.graph, layout = layout_with_fr(net.graph), main = "AMF-PLANT NETWORK FILTER5", vertex.label = NA)
-
-mycolors <- brewer.pal(12, "Paired") #library(RColorBrewer)
-mycolors
-# "#A6CEE3" "#1F78B4" "#B2DF8A" "#33A02C" "#FB9A99" "#E31A1C" "#FDBF6F" "#FF7F00" "#CAB2D6" "#6A3D9A" "#FFFF99" "#B15928"
+plot(net.graph, layout = layout_with_fr(net.graph), main = "AMF-PLANT NETWORK", vertex.label = NA)
 
 node.attr <- read.csv(file = "groups.csv", header = T, row.names = 1)
-# set vertices color
+# Set vertices color
 net.graph.col <- node.attr[V(net.graph)$name, ]
-net.graph.col$Genus <- factor(net.graph.col$Genus, levels = c("Ambispora", "Archaeospora", "Claroideoglomus", "Diversispora", "Dominikia", "Glomus", 
-                                                              "Kamienskia", "Paraglomus", "Funneliformis", "Rhizophagus", "Septoglomus", "Unclassified", "plant"))
+net.graph.col$Genus <- factor(net.graph.col$Genus, 
+                           levels = c("Ambispora", "Archaeospora", "Claroideoglomus", "Diversispora", "Dominikia", "Glomus", 
+                                      "Kamienskia", "Paraglomus", "Funneliformis", "Rhizophagus", "Septoglomus", "Unclassified", "plant"))
 levels(net.graph.col$Genus) <- c("#A6CEE3", "#FFFF99", "gray80", "gray30", "#1F78B4", "#E31A1C", "#FDBF6F", "#FF7F00", "#CAB2D6", "#6A3D9A", "#FB9A99", "#B15928", "#33A02C")
 V(net.graph)$color <- as.character(net.graph.col$Genus)
 
@@ -359,7 +338,7 @@ plot(net.graph, edge.curved = T, vertex.frame.color = NA, layout = layout_with_f
 
 legend(x = -1.5, y = -0.5, c("Ambispora", "Archaeospora", "Claroideoglomus", "Diversispora", "Dominikia", "Glomus", "Kamienskia", "Paraglomus", "Funneliformis", "Rhizophagus", "Septoglomus", "Unclassified", "Plant"), pch=21, col="#777777", pt.bg = levels(net.graph.col$Genus), pt.cex=2, cex=.8, bty="n", ncol=1)
 
-# network attributes
+# Network attributes
 # 1. number of edges
 num.edges <- length(E(net.graph))
 num.edges
@@ -370,41 +349,41 @@ positive.edges
 negative.edges <- sum(net.graph.weight < 0) # negative edges
 negative.edges
 
-# 2. number of vertices
+# 2. Number of vertices
 num.vertices <- length(V(net.graph))
 num.vertices
 
-# 3. number of connectance
+# 3. Number of connectance
 connectance <- edge_density(net.graph, loops = FALSE) # loops = TRUE means self-connectance i.e A-A, B-B
 connectance
 
-# 4. average degree
+# 4. Average degree
 average.degree <- mean(igraph::degree(net.graph))
 average.degree
 
-# 5. average path length
+# 5. Average path length
 average.path.length <- average.path.length(net.graph) # or mean_distance(net.graph)
 average.path.length
 
-# 6.diameter
+# 6.Diameter
 diameter <- diameter(net.graph, directed = FALSE, unconnected = TRUE, weights = NULL)
 diameter
 
-# 7. adge connectivity / group adhesion
+# 7. Adge connectivity / group adhesion
 edge.connectivity <- edge_connectivity(net.graph)
 edge.connectivity
 
-# 8. clustering coefficient
+# 8. Clustering coefficient
 clustering.coefficient <- transitivity(net.graph)
 clustering.coefficient
 
 no.clusters <- no.clusters(net.graph)
 no.clusters
 
-# 9. betweenness centralization
+# 9. Betweenness centralization
 centralization.betweenness <- centralization.betweenness(net.graph)$centralization
 centralization.betweenness
 
-# 10. degree centralization
+# 10. Degree centralization
 centralization.degree <- centralization.degree(net.graph)$centralization
 centralization.degree
