@@ -196,6 +196,52 @@ plot_multi_way_importance(importance_frame, x_measure = "mse_increase",
                           size_measure = "p_value", no_of_labels = 10)
 
 importance(forest, type = 1)
+##################################################################
+## Principal coordinates analysis (PCoA)
+library(phyloseq)
+library(ggplot2)
+library(RColorBrewer)
+library(vegan)
+
+# Set working directory and read in data
+setwd("~")
+
+# Read in data
+com.data <- t(read.csv(file = "amf.com.csv", header = T, row.names = 1))
+com.data <- as.matrix(com.data); class(com.data) # matrix
+head(com.data, 3)
+
+sample.data <- read.csv(file = "sample.data.csv", header = T, row.names = 1)
+sample.data <- as.data.frame(sample.data); class(sample.data) # data frame
+
+sample.data$Treatment <- factor(sample.data$Treatment, levels = c("Control", "CHR", "CHRR", "INT", "INTR"))
+                          
+# Construct phyloseq dataset
+ps <- phyloseq(otu_table(com.data, taxa_are_rows = T), sample_data(sample.data))
+ps
+
+# Using Bray-Curtis dissimilarity
+ord.nmds.bray <- ordinate(ps, method = "PCoA", distance = "bray", binary = F)
+
+p <- plot_ordination(ps, 
+                     ord.nmds.bray, 
+                     color = "Treatment", 
+                     shape = "Type", 
+                     title = "Bray PCoA of soil AMF in genus level") + 
+                     geom_point(size=7, alpha = 0.75) + 
+                     scale_colour_manual(values = c("#8DC63F", "#FBB040", "#F06B22", "#39B54A", "#009444"), aesthetics = c("color"))
+p
+
+# Anosim
+dis.ind <- vegdist(t(otu_table(ps)), method = "bray")
+anosim.treatment <- anosim(dis.ind, sample_data(ps)$Treatment, permutations = 999)
+summary(anosim.treatment)
+
+
+# PERMANOVA 
+dis.ind <- vegdist(t(otu_table(ps)), method = "bray")
+adonis.treatment <- adonis(dis.ind ~ Treatment, sample.data, permutations = 999)
+adonis.treatment
 
 ##################################################################
 # Redundancy Analysis (RDA)
