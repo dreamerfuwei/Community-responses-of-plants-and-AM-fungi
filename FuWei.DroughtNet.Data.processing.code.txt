@@ -433,3 +433,99 @@ centralization.betweenness
 # 10. Degree centralization
 centralization.degree <- centralization.degree(net.graph)$centralization
 centralization.degree
+
+
+##########################################################################
+## Phylogenetic analysis
+library(dada2)
+library(phangorn)
+library(DECIPHER)
+library(phyloseq)
+library(ggplot2)
+library(vegan)
+
+# Set working directory
+setwd("~")
+
+# Read in data
+seqtab <- read.csv(file = "seqs.csv",row.names = 1, header = T)
+
+seqs <- getSequences(as.matrix(seqtab)); head(seqs, 3)
+names(seqs) <- seqtab$Names
+
+# Performing a multiple-alignment using the DECIPHER R package
+alignment <- AlignSeqs(DNAStringSet(seqs), anchor = NA)
+
+# Constructing a neighbor-joining (NJ) tree using the phangorn R package, and then fitted a 
+# GTR+G+I maximum likelihood tree using the NJ tree as a starting point.
+phang.align <- phyDat(as(alignment, "matrix"), type = "DNA")
+dm <- dist.ml(phang.align)
+treeNJ <- NJ(dm)
+plot(treeNJ)
+fit <- pml(treeNJ, data = phang.align)
+fit
+
+fitGTR <- update(fit, k = 4, inv = 0.2)
+fitGTR <- optim.pml(fitGTR, model = "GTR", optInv = T, optGamma = T, 
+                    rearrangement = "stochastic", control = pml.control(trace = 0))
+
+# Constructing a phyloseq object
+asvtab <- read.csv(file = "asvtab.csv", row.names = 1, header = T)
+asvtab <- as.matrix(asvtab)
+taxa <- read.csv(file = "taxa.csv", row.names = 1, header = T)
+taxa <- as.matrix(taxa)
+sample <- read.csv(file = "sample.csv", row.names = 1, header = T)
+sample$Treatment <- factor(sample$Treatment, levels = c("Control","CHR", "CHRR", "INT", "INTR"))
+
+class(asvtab)
+class(taxa)
+class(sample)
+
+ps <- phyloseq(tax_table(taxa), sample_data(sample), otu_table(asvtab, taxa_are_rows = T), 
+               phy_tree(fitGTR$tree))
+ps
+
+ord <- ordinate(ps, method = "PCoA", distance = "wunifrac")
+
+p <- plot_ordination(ps, ord, color = "Treatment") + 
+          geom_point(size = 5) + theme_bw() + 
+          labs(title = "PCoA of soil AM fungal communities (Weighted-UniFrac)") +
+          scale_color_manual(values = c("#6ABD45", "#F15B2B", "#FDBF6F", "#9E2064", "#CAB2D6")) +
+          theme(axis.text.y = element_text(colour="black", size = 10, angle = 90, vjust = 1, hjust = 0.5),
+                axis.text.x = element_text(colour="black", size = 10, vjust = 1, hjust = 0.5),
+                axis.title.y = element_text(colour="black", size = 12),
+                axis.title.x = element_text(colour="black", size = 12),
+                panel.grid.minor = element_blank(),
+                legend.position = c(0.90, 0.85))
+p
+
+# Analysis of similarity (Anosim) significance
+wunifrac <- phyloseq::distance(ps, method = "wunifrac")
+anosim.treatment <- anosim(wunifrac, sample_data(ps)$Treatment, permutations = 999)
+summary(anosim.treatment)
+
+# PERMANOVA 
+wunifrac <- phyloseq::distance(ps, method = "wunifrac")
+adonis.treatment <- adonis(wunifrac ~ Treatment, sample, permutations = 999)
+adonis.treatment
+
+## Calculating the net relatedness index (NRI) and nearest taxon index (NTI)
+library(picante)
+library(ape)
+tree <- fitGTR$tree
+plot(tree)
+comm.data <- as.matrix(t(asvtab)); class(comm.data)
+
+pd.result <- pd(comm.data, phy, include.root = F)
+pd.result
+
+phydist <- cophenetic(tree)
+ses.mpd.result <- ses.mpd(comm.data, phydist, null.model = "independentswap", 
+                          abundance.weighted = T, runs = 999)
+ses.mpd.result
+
+ses.mntd.result <- ses.mntd(comm.data, phydist, null.model = "independentswap", 
+                          abundance.weighted = T, runs = 999)
+ses.mntd.result
+
+
